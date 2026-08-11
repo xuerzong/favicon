@@ -3,29 +3,29 @@ package handler
 import (
 	"favicon/internal/config"
 	"favicon/internal/services"
-	"favicon/internal/util"
 	"net/http"
 	"path"
-
-	"github.com/gin-gonic/gin"
 )
 
-func GetFavicon(ctx *gin.Context, httpClient *http.Client, cfg *config.Config, siteUrl string) (any, error) {
-	faviconUrl, err := services.GetFavicon(httpClient, siteUrl)
+type FaviconData struct {
+	URL  string `json:"url"`
+	Name string `json:"name"`
+}
+
+func GetFaviconByDomain(httpClient *http.Client, cfg *config.Config, domain string) (*FaviconData, error) {
+	faviconUrl, err := services.GetFaviconByDomain(httpClient, domain)
 	if err != nil {
 		return nil, err
 	}
 
-	domain, err := util.GetDomainFromURL(siteUrl)
-	if err != nil {
+	filename := domain + ".png"
+
+	if err := services.DownloadFavicon(httpClient, faviconUrl, path.Join(cfg.ImageSavePath, filename)); err != nil {
 		return nil, err
 	}
 
-	if err := services.GetAndSaveFavicon(httpClient, faviconUrl, path.Join(cfg.ImageSavePath, domain+".png")); err != nil {
-		return nil, err
-	}
-
-	return gin.H{
-		"url": faviconUrl,
+	return &FaviconData{
+		URL:  faviconUrl,
+		Name: filename,
 	}, nil
 }

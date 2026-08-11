@@ -12,7 +12,7 @@ import (
 
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) GoFetcher/1.0"
 
-func GetFavicon(client *http.Client, siteUrl string) (string, error) {
+func GetFaviconByDomain(client *http.Client, siteUrl string) (string, error) {
 	siteUrl = util.EnsureHTTPS(siteUrl)
 
 	req, err := http.NewRequest(http.MethodGet, siteUrl, nil)
@@ -59,8 +59,6 @@ func GetFavicon(client *http.Client, siteUrl string) (string, error) {
 		}
 	})
 
-	fmt.Println(candidates)
-
 	for _, href := range candidates {
 		abs, err := baseUrl.Parse(href)
 		if err == nil {
@@ -85,7 +83,7 @@ func GetFaviconFromGoogle(bareDomain string, size int) string {
 	return fmt.Sprintf("https://www.google.com/s2/favicons?domain=%s&sz=%d", bareDomain, size)
 }
 
-func GetAndSaveFavicon(client *http.Client, faviconUrl string, filePath string) error {
+func DownloadFavicon(client *http.Client, faviconUrl string, filePath string) error {
 	req, err := http.NewRequest(http.MethodGet, faviconUrl, nil)
 	if err != nil {
 		return err

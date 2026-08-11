@@ -5,15 +5,20 @@ import (
 	"favicon/internal/config"
 	"favicon/internal/handler"
 	"favicon/internal/response"
+	"favicon/internal/util"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/sync/singleflight"
 )
+
+var sf singleflight.Group
 
 func main() {
 	cfg, err := config.LoadConfig()
@@ -42,12 +47,51 @@ func main() {
 			return
 		}
 
-		data, err := handler.GetFavicon(ctx, client, cfg, siteUrl)
+		domain, err := util.GetDomainFromURL(siteUrl)
+		if err != nil {
+			response.Error(ctx, response.NewResponseError(http.StatusInternalServerError, err.Error()))
+			return
+		}
+
+		data, err, _ := sf.Do(siteUrl, func() (any, error) {
+			return handler.GetFaviconByDomain(client, cfg, domain)
+		})
+
 		if err != nil {
 			response.Error(ctx, err)
 			return
 		}
 		response.Success(ctx, data)
+	})
+
+	router.NoRoute(func(ctx *gin.Context) {
+		siteUrl := ctx.Request.URL.Path[1:]
+		if siteUrl == "" {
+			response.Error(ctx, response.NewResponseError(http.StatusBadRequest, "BAD_REQUEST"))
+			return
+		}
+
+		domain, err := util.GetDomainFromURL(siteUrl)
+		if err != nil {
+			response.Error(ctx, response.NewResponseError(http.StatusInternalServerError, err.Error()))
+			return
+		}
+
+		data, err, _ := sf.Do(domain, func() (any, error) {
+			return handler.GetFaviconByDomain(client, cfg, domain)
+		})
+
+		fdata := data.(*handler.FaviconData)
+
+		if err != nil {
+			response.Error(ctx, err)
+			return
+		}
+		ctx.File(path.Join(cfg.ImageSavePath, fdata.Name))
+	})
+
+	router.NoMethod(func(ctx *gin.Context) {
+		response.Error(ctx, response.NewResponseError(http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED"))
 	})
 
 	server := New(router, cfg.Address, cfg.ShutdownTimeout, logger)

@@ -13,6 +13,7 @@ type Config struct {
 	ShutdownTimeout time.Duration
 	GinMode         string
 	ImageSavePath   string
+	AppBaseURL      string
 }
 
 func LoadConfig() (*Config, error) {
@@ -27,25 +28,19 @@ func LoadConfig() (*Config, error) {
 		shutdownTimeout = time.Duration(seconds) * time.Second
 	}
 
-	address := os.Getenv("ADDRESS")
-	if address == "" {
-		address = ":8080"
-	}
-
-	ginMode := os.Getenv("GIN_MODE")
-	if ginMode == "" {
-		ginMode = "debug"
-	}
-
-	imageSavePath := os.Getenv("IMAGE_SAVE_PATH")
-	if imageSavePath == "" {
-		imageSavePath = "images"
-	}
-
 	return &Config{
-		Address:         address,
+		Address:         env("ADDRESS", ":8080"),
 		ShutdownTimeout: shutdownTimeout,
-		GinMode:         ginMode,
-		ImageSavePath:   imageSavePath,
+		GinMode:         env("GIN_MODE", "debug"),
+		ImageSavePath:   env("IMAGE_SAVE_PATH", "images"),
+		AppBaseURL:      env("APP_BASE_URL", "http://127.0.0.1:8080"),
 	}, nil
+}
+
+func env(key string, defaultVal string) string {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultVal
+	}
+	return v
 }
