@@ -1,6 +1,6 @@
-<script>
-    import PreviewInput from "./components/PreviewInput.svelte";
-    import GithubIcon from "./assets/github.svg";
+<script lang="ts">
+    import PreviewInput from '$lib/components/PreviewInput.svelte';
+    import GithubIcon from '$lib/assets/github.svg';
 </script>
 
 <section class="hero">
