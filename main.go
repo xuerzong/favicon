@@ -67,13 +67,13 @@ func main() {
 	router.NoRoute(func(ctx *gin.Context) {
 		siteUrl := ctx.Request.URL.Path[1:]
 		if siteUrl == "" {
-			response.Error(ctx, response.NewResponseError(http.StatusBadRequest, "BAD_REQUEST"))
+			ctx.File(path.Join(cfg.ImageSavePath, "default.svg"))
 			return
 		}
 
 		domain, err := util.GetDomainFromURL(siteUrl)
 		if err != nil {
-			response.Error(ctx, response.NewResponseError(http.StatusInternalServerError, err.Error()))
+			ctx.File(path.Join(cfg.ImageSavePath, "default.svg"))
 			return
 		}
 
@@ -84,7 +84,7 @@ func main() {
 		fdata := data.(*handler.FaviconData)
 
 		if err != nil {
-			response.Error(ctx, err)
+			ctx.File(path.Join(cfg.ImageSavePath, "default.svg"))
 			return
 		}
 		ctx.File(path.Join(cfg.ImageSavePath, fdata.Name))
