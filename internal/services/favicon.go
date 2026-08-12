@@ -1,11 +1,14 @@
 package services
 
 import (
+	"encoding/base64"
 	"favicon/internal/util"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -84,6 +87,10 @@ func GetFaviconFromGoogle(bareDomain string, size int) string {
 }
 
 func DownloadFavicon(client *http.Client, faviconUrl string, filePath string) error {
+	if strings.HasPrefix(faviconUrl, "data:") {
+		return saveDataURIIcon(faviconUrl, filePath)
+	}
+
 	req, err := http.NewRequest(http.MethodGet, faviconUrl, nil)
 	if err != nil {
 		return err
@@ -114,4 +121,29 @@ func DownloadFavicon(client *http.Client, faviconUrl string, filePath string) er
 
 	_, err = io.Copy(f, resp.Body)
 	return err
+}
+
+func saveDataURIIcon(dataURI string, filePath string) error {
+	header, payload, ok := strings.Cut(dataURI, ",")
+	if !ok {
+		return fmt.Errorf("invalid data uri")
+	}
+
+	var data []byte
+	if strings.HasSuffix(header, ";base64") {
+		b64, err := base64.StdEncoding.DecodeString(payload)
+		if err != nil {
+			return err
+		}
+		data = b64
+	} else {
+		var err error
+		decoded, err := url.QueryUnescape(payload)
+		if err != nil {
+			return err
+		}
+		data = []byte(decoded)
+	}
+
+	return os.WriteFile(filePath, data, 0644)
 }
