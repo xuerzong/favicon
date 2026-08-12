@@ -5,7 +5,8 @@ import (
 	"favicon/internal/cache"
 	"favicon/internal/config"
 	"favicon/internal/service"
-	"favicon/internal/util"
+	"favicon/pkg/core"
+	"favicon/pkg/util"
 	"log/slog"
 	"net/http"
 	"os"
@@ -72,8 +73,10 @@ func faviconHandler(cfg *config.Config, client *http.Client, faviconCache *cache
 			return
 		}
 
+		fv := core.NewFavicon(client, domain)
+
 		data, err, _ := sf.Do(domain, func() (any, error) {
-			return service.GetFaviconByDomain(client, cfg, faviconCache, domain)
+			return service.GetFaviconByDomain(cfg, faviconCache, fv)
 		})
 
 		if err != nil {
@@ -81,7 +84,14 @@ func faviconHandler(cfg *config.Config, client *http.Client, faviconCache *cache
 			return
 		}
 
-		fdata := data.(*service.FaviconData)
-		http.ServeFile(w, r, path.Join(cfg.ImageSavePath, fdata.Name))
+		fdata := data.(*service.FaviconResult)
+
+		if cfg.LocalCache {
+			http.ServeFile(w, r, path.Join(cfg.ImageSavePath, fdata.Name))
+			return
+		}
+
+		w.Header().Set("Content-Type", fdata.Data.ContentType)
+		w.Write(fdata.Data.Data)
 	})
 }

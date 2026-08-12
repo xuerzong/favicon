@@ -3,6 +3,10 @@
 !/images/.gitkeep
 !/images/default.*
 
+# Env
+.env
+.env.local
+
 # Logs
 logs
 *.log

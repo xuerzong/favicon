@@ -15,6 +15,7 @@ type Config struct {
 	ImageSavePath   string
 	AppBaseURL      string
 	CacheTTL        time.Duration
+	LocalCache      bool
 }
 
 func LoadConfig() (*Config, error) {
@@ -45,6 +46,7 @@ func LoadConfig() (*Config, error) {
 		ImageSavePath:   env("IMAGE_SAVE_PATH", "images"),
 		AppBaseURL:      env("APP_BASE_URL", "http://127.0.0.1:8080"),
 		CacheTTL:        cacheTTL,
+		LocalCache:      envBool("LOCAL_CACHE", true),
 	}, nil
 }
 
@@ -54,4 +56,16 @@ func env(key string, defaultVal string) string {
 		return defaultVal
 	}
 	return v
+}
+
+func envBool(key string, defaultVal bool) bool {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultVal
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return defaultVal
+	}
+	return b
 }
