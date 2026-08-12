@@ -14,7 +14,7 @@ services:
       LOCAL_CACHE: "true"
       CACHE_TTL: 1h
     volumes:
-      - favicon-images:/data/images
+      - ./volumes/images:/data/images
     ports:
       - "8866:8080"
 
@@ -30,6 +30,3 @@ services:
       IMGPROXY_HTTP_CLIENT_MAX_REDIRECTS: 3
     ports:
       - "8867:8080"
-
-volumes:
-  favicon-images:
