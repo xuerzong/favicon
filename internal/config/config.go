@@ -14,6 +14,7 @@ type Config struct {
 	GinMode         string
 	ImageSavePath   string
 	AppBaseURL      string
+	CacheTTL        time.Duration
 }
 
 func LoadConfig() (*Config, error) {
@@ -28,12 +29,22 @@ func LoadConfig() (*Config, error) {
 		shutdownTimeout = time.Duration(seconds) * time.Second
 	}
 
+	cacheTTL := 1 * time.Hour
+	if v := os.Getenv("CACHE_TTL"); v != "" {
+		ttl, err := time.ParseDuration(v)
+		if err != nil {
+			return nil, err
+		}
+		cacheTTL = ttl
+	}
+
 	return &Config{
 		Address:         env("ADDRESS", ":8080"),
 		ShutdownTimeout: shutdownTimeout,
 		GinMode:         env("GIN_MODE", "debug"),
 		ImageSavePath:   env("IMAGE_SAVE_PATH", "images"),
 		AppBaseURL:      env("APP_BASE_URL", "http://127.0.0.1:8080"),
+		CacheTTL:        cacheTTL,
 	}, nil
 }
 

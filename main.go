@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"favicon/internal/cache"
 	"favicon/internal/config"
 	"favicon/internal/handler"
 	"favicon/internal/response"
@@ -40,6 +41,8 @@ func main() {
 		Timeout: 8 * time.Second,
 	}
 
+	faviconCache := cache.New(cfg.CacheTTL)
+
 	router.GET("/favicon", func(ctx *gin.Context) {
 		siteUrl, siteUrlOk := ctx.GetQuery("url")
 		if !siteUrlOk {
@@ -54,7 +57,7 @@ func main() {
 		}
 
 		data, err, _ := sf.Do(siteUrl, func() (any, error) {
-			return handler.GetFaviconByDomain(client, cfg, domain)
+			return handler.GetFaviconByDomain(client, cfg, faviconCache, domain)
 		})
 
 		if err != nil {
@@ -78,7 +81,7 @@ func main() {
 		}
 
 		data, err, _ := sf.Do(domain, func() (any, error) {
-			return handler.GetFaviconByDomain(client, cfg, domain)
+			return handler.GetFaviconByDomain(client, cfg, faviconCache, domain)
 		})
 
 		fdata := data.(*handler.FaviconData)
