@@ -5,6 +5,7 @@ import (
 	"favicon/internal/services"
 	"net/http"
 	"path"
+	"path/filepath"
 )
 
 type FaviconData struct {
@@ -18,14 +19,13 @@ func GetFaviconByDomain(httpClient *http.Client, cfg *config.Config, domain stri
 		return nil, err
 	}
 
-	filename := domain + ".png"
-
-	if err := services.DownloadFavicon(httpClient, faviconUrl, path.Join(cfg.ImageSavePath, filename)); err != nil {
+	filePath, err := services.DownloadFavicon(httpClient, faviconUrl, path.Join(cfg.ImageSavePath, domain))
+	if err != nil {
 		return nil, err
 	}
 
 	return &FaviconData{
 		URL:  faviconUrl,
-		Name: filename,
+		Name: filepath.Base(filePath),
 	}, nil
 }

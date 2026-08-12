@@ -86,64 +86,72 @@ func GetFaviconFromGoogle(bareDomain string, size int) string {
 	return fmt.Sprintf("https://www.google.com/s2/favicons?domain=%s&sz=%d", bareDomain, size)
 }
 
-func DownloadFavicon(client *http.Client, faviconUrl string, filePath string) error {
+func DownloadFavicon(client *http.Client, faviconUrl string, fileBasePath string) (string, error) {
 	if strings.HasPrefix(faviconUrl, "data:") {
-		return saveDataURIIcon(faviconUrl, filePath)
+		return saveDataURIIcon(faviconUrl, fileBasePath)
 	}
 
 	req, err := http.NewRequest(http.MethodGet, faviconUrl, nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	req.Header.Set("User-Agent", USER_AGENT)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("status %d", resp.StatusCode)
+		return "", fmt.Errorf("status %d", resp.StatusCode)
 	}
 
 	ct := resp.Header.Get("Content-Type")
 
 	if !util.IsImageContentType(ct) {
-		return fmt.Errorf("Content type is: %s", ct)
+		return "", fmt.Errorf("Content type is: %s", ct)
 	}
+
+	filePath := fileBasePath + util.ExtensionForContentType(ct)
 
 	f, err := os.Create(filePath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer f.Close()
 
 	_, err = io.Copy(f, resp.Body)
-	return err
+	return filePath, err
 }
 
-func saveDataURIIcon(dataURI string, filePath string) error {
+func saveDataURIIcon(dataURI string, fileBasePath string) (string, error) {
 	header, payload, ok := strings.Cut(dataURI, ",")
 	if !ok {
-		return fmt.Errorf("invalid data uri")
+		return "", fmt.Errorf("invalid data uri")
 	}
+
+	mediatype := strings.TrimPrefix(header, "data:")
+	if idx := strings.Index(mediatype, ";"); idx != -1 {
+		mediatype = mediatype[:idx]
+	}
+
+	filePath := fileBasePath + util.ExtensionForContentType(mediatype)
 
 	var data []byte
 	if strings.HasSuffix(header, ";base64") {
 		b64, err := base64.StdEncoding.DecodeString(payload)
 		if err != nil {
-			return err
+			return "", err
 		}
 		data = b64
 	} else {
-		var err error
 		decoded, err := url.QueryUnescape(payload)
 		if err != nil {
-			return err
+			return "", err
 		}
 		data = []byte(decoded)
 	}
 
-	return os.WriteFile(filePath, data, 0644)
+	return filePath, os.WriteFile(filePath, data, 0644)
 }
