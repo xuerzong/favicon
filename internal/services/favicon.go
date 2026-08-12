@@ -88,7 +88,7 @@ func GetFaviconFromGoogle(bareDomain string, size int) string {
 
 func DownloadFavicon(client *http.Client, faviconUrl string, fileBasePath string) (string, error) {
 	if strings.HasPrefix(faviconUrl, "data:") {
-		return saveDataURIIcon(faviconUrl, fileBasePath)
+		return SaveDataURIIcon(faviconUrl, fileBasePath)
 	}
 
 	req, err := http.NewRequest(http.MethodGet, faviconUrl, nil)
@@ -125,7 +125,7 @@ func DownloadFavicon(client *http.Client, faviconUrl string, fileBasePath string
 	return filePath, err
 }
 
-func saveDataURIIcon(dataURI string, fileBasePath string) (string, error) {
+func SaveDataURIIcon(dataURI string, fileBasePath string) (string, error) {
 	header, payload, ok := strings.Cut(dataURI, ",")
 	if !ok {
 		return "", fmt.Errorf("invalid data uri")

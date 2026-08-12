@@ -5,17 +5,16 @@ import (
 	"favicon/internal/cache"
 	"favicon/internal/config"
 	"favicon/internal/handler"
-	"favicon/internal/response"
 	"favicon/internal/util"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"path"
+	"strings"
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -28,14 +27,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	gin.SetMode(cfg.GinMode)
-
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-
-	router := gin.Default()
-	router.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "pong"})
-	})
 
 	client := &http.Client{
 		Timeout: 8 * time.Second,
@@ -43,61 +35,7 @@ func main() {
 
 	faviconCache := cache.New(cfg.CacheTTL)
 
-	router.GET("/favicon", func(ctx *gin.Context) {
-		siteUrl, siteUrlOk := ctx.GetQuery("url")
-		if !siteUrlOk {
-			response.Error(ctx, response.NewResponseError(http.StatusBadRequest, "BAD_REQUEST"))
-			return
-		}
-
-		domain, err := util.GetDomainFromURL(siteUrl)
-		if err != nil {
-			response.Error(ctx, response.NewResponseError(http.StatusInternalServerError, err.Error()))
-			return
-		}
-
-		data, err, _ := sf.Do(siteUrl, func() (any, error) {
-			return handler.GetFaviconByDomain(client, cfg, faviconCache, domain)
-		})
-
-		if err != nil {
-			response.Error(ctx, err)
-			return
-		}
-		response.Success(ctx, data)
-	})
-
-	router.NoRoute(func(ctx *gin.Context) {
-		siteUrl := ctx.Request.URL.Path[1:]
-		if siteUrl == "" {
-			ctx.File(path.Join(cfg.ImageSavePath, "default.svg"))
-			return
-		}
-
-		domain, err := util.GetDomainFromURL(siteUrl)
-		if err != nil {
-			ctx.File(path.Join(cfg.ImageSavePath, "default.svg"))
-			return
-		}
-
-		data, err, _ := sf.Do(domain, func() (any, error) {
-			return handler.GetFaviconByDomain(client, cfg, faviconCache, domain)
-		})
-
-		fdata := data.(*handler.FaviconData)
-
-		if err != nil {
-			ctx.File(path.Join(cfg.ImageSavePath, "default.svg"))
-			return
-		}
-		ctx.File(path.Join(cfg.ImageSavePath, fdata.Name))
-	})
-
-	router.NoMethod(func(ctx *gin.Context) {
-		response.Error(ctx, response.NewResponseError(http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED"))
-	})
-
-	server := New(router, cfg.Address, cfg.ShutdownTimeout, logger)
+	server := New(withLogging(logger, faviconHandler(cfg, client, faviconCache)), cfg.Address, cfg.ShutdownTimeout, logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -106,4 +44,44 @@ func main() {
 		logger.Error("server error", "error", err)
 		os.Exit(1)
 	}
+}
+
+func withLogging(logger *slog.Logger, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		next.ServeHTTP(w, r)
+		logger.Info("request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"duration", time.Since(start),
+		)
+	})
+}
+
+func faviconHandler(cfg *config.Config, client *http.Client, faviconCache *cache.Cache) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siteUrl := strings.TrimPrefix(r.URL.Path, "/")
+		if siteUrl == "" {
+			http.ServeFile(w, r, path.Join(cfg.ImageSavePath, "default.svg"))
+			return
+		}
+
+		domain, err := util.GetDomainFromURL(siteUrl)
+		if err != nil {
+			http.ServeFile(w, r, path.Join(cfg.ImageSavePath, "default.svg"))
+			return
+		}
+
+		data, err, _ := sf.Do(domain, func() (any, error) {
+			return handler.GetFaviconByDomain(client, cfg, faviconCache, domain)
+		})
+
+		if err != nil {
+			http.ServeFile(w, r, path.Join(cfg.ImageSavePath, "default.svg"))
+			return
+		}
+
+		fdata := data.(*handler.FaviconData)
+		http.ServeFile(w, r, path.Join(cfg.ImageSavePath, fdata.Name))
+	})
 }
