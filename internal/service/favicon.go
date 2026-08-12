@@ -1,4 +1,4 @@
-package services
+package service
 
 import (
 	"encoding/base64"
@@ -10,12 +10,54 @@ import (
 	"os"
 	"strings"
 
+	"favicon/internal/cache"
+	"favicon/internal/config"
+	"path"
+	"path/filepath"
+
 	"github.com/PuerkitoBio/goquery"
 )
 
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) GoFetcher/1.0"
 
-func GetFaviconByDomain(client *http.Client, siteUrl string) (string, error) {
+type FaviconData struct {
+	URL  string `json:"url"`
+	Name string `json:"name"`
+}
+
+func GetFaviconByDomain(httpClient *http.Client, cfg *config.Config, faviconCache *cache.Cache, domain string) (*FaviconData, error) {
+	if item, ok := faviconCache.Get(domain); ok {
+		if _, err := os.Stat(path.Join(cfg.ImageSavePath, item.Name)); err == nil {
+			return &FaviconData{
+				URL:  item.URL,
+				Name: item.Name,
+			}, nil
+		}
+		faviconCache.Delete(domain)
+	}
+
+	faviconUrl, err := GetFaviconFromSite(httpClient, domain)
+	if err != nil {
+		faviconCache.Set(domain, "", "default.svg")
+		return nil, err
+	}
+
+	filePath, err := DownloadFavicon(httpClient, faviconUrl, path.Join(cfg.ImageSavePath, domain))
+	if err != nil {
+		faviconCache.Set(domain, "", "default.svg")
+		return nil, err
+	}
+
+	name := filepath.Base(filePath)
+	faviconCache.Set(domain, faviconUrl, name)
+
+	return &FaviconData{
+		URL:  faviconUrl,
+		Name: name,
+	}, nil
+}
+
+func GetFaviconFromSite(client *http.Client, siteUrl string) (string, error) {
 	siteUrl = util.EnsureHTTPS(siteUrl)
 
 	req, err := http.NewRequest(http.MethodGet, siteUrl, nil)
