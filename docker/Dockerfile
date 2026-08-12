@@ -16,6 +16,10 @@ WORKDIR /app
 
 COPY --from=builder /favicon /usr/local/bin/favicon
 
+RUN mkdir -p /data/images
+
+COPY images/default.svg /data/images/default.svg
+
 EXPOSE 8080
 
 ENTRYPOINT ["/usr/local/bin/favicon"]

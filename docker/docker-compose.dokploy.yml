@@ -1,0 +1,24 @@
+services:
+  favicon:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: favicon:latest
+    restart: unless-stopped
+    environment:
+      ADDRESS: :8080
+      SHUTDOWN_TIMEOUT: 10
+      GIN_MODE: production
+      IMAGE_SAVE_PATH: /data/images
+      LOCAL_CACHE: "true"
+      CACHE_TTL: 1h
+
+  imgproxy:
+    image: darthsim/imgproxy:v3
+    restart: unless-stopped
+    depends_on:
+      - favicon
+    environment:
+      IMGPROXY_SOURCE_URL: "http://favicon:8080/"
+      IMGPROXY_MAX_SOURCE_RESOLUTION: 64
+      IMGPROXY_HTTP_CLIENT_MAX_REDIRECTS: 3
