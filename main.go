@@ -38,6 +38,10 @@ func main() {
 
 	faviconCache := cache.New(cfg.CacheTTL)
 
+	if cfg.LocalCache {
+		go service.StartCacheCleanup(cfg.ImageSavePath, cfg.CacheTTL, logger)
+	}
+
 	server := New(withLogging(logger, faviconHandler(cfg, client, faviconCache)), cfg.Address, cfg.ShutdownTimeout, logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
