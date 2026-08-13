@@ -55,7 +55,7 @@ func (o *ImgproxyOpts) segments() string {
 		}
 	}
 
-	if o.Rotate >= 0 && o.Rotate <= 360 {
+	if o.Rotate >= 0 && o.Rotate <= 360 && o.Rotate%90 == 0 {
 		opts = append(opts, fmt.Sprintf("rotate:%d", o.Rotate))
 	}
 
