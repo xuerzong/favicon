@@ -12,6 +12,8 @@ services:
       IMAGE_SAVE_PATH: /data/images
       LOCAL_CACHE: "true"
       CACHE_TTL: 1h
+      IMGPROXY_URL: http://imgproxy:8080
+      IMGPROXY_SOURCE_URL: http://favicon:8080/raw/
 
   imgproxy:
     image: darthsim/imgproxy:v3
@@ -19,6 +21,6 @@ services:
     depends_on:
       - favicon
     environment:
-      IMGPROXY_SOURCE_URL: "http://favicon:8080/"
+      IMGPROXY_SOURCE_URL: "http://favicon:8080/raw/"
       IMGPROXY_MAX_SOURCE_RESOLUTION: 64
       IMGPROXY_HTTP_CLIENT_MAX_REDIRECTS: 3

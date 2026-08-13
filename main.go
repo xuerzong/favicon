@@ -7,11 +7,13 @@ import (
 	"favicon/internal/service"
 	"favicon/pkg/core"
 	"favicon/pkg/util"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"path"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -61,7 +63,13 @@ func withLogging(logger *slog.Logger, next http.Handler) http.Handler {
 
 func faviconHandler(cfg *config.Config, client *http.Client, faviconCache *cache.Cache) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw := false
 		siteUrl := strings.TrimPrefix(r.URL.Path, "/")
+		if strings.HasPrefix(siteUrl, "raw/") {
+			raw = true
+			siteUrl = strings.TrimPrefix(siteUrl, "raw/")
+		}
+
 		if siteUrl == "" {
 			http.ServeFile(w, r, path.Join(cfg.ImageSavePath, "default.svg"))
 			return
@@ -73,25 +81,72 @@ func faviconHandler(cfg *config.Config, client *http.Client, faviconCache *cache
 			return
 		}
 
-		fv := core.NewFavicon(client, domain)
-
-		data, err, _ := sf.Do(domain, func() (any, error) {
-			return service.GetFaviconByDomain(cfg, faviconCache, fv)
-		})
-
-		if err != nil {
-			http.ServeFile(w, r, path.Join(cfg.ImageSavePath, "default.svg"))
+		if !raw && cfg.ImgproxyURL != "" {
+			serveViaImgproxy(w, r, client, cfg, domain)
 			return
 		}
 
-		fdata := data.(*service.FaviconResult)
-
-		if cfg.LocalCache {
-			http.ServeFile(w, r, path.Join(cfg.ImageSavePath, fdata.Name))
-			return
-		}
-
-		w.Header().Set("Content-Type", fdata.Data.ContentType)
-		w.Write(fdata.Data.Data)
+		serveRawFavicon(w, r, client, cfg, faviconCache, domain)
 	})
+}
+
+func serveRawFavicon(w http.ResponseWriter, r *http.Request, client *http.Client, cfg *config.Config, faviconCache *cache.Cache, domain string) {
+	fv := core.NewFavicon(client, domain)
+
+	data, err, _ := sf.Do(domain, func() (any, error) {
+		return service.GetFaviconByDomain(cfg, faviconCache, fv)
+	})
+
+	if err != nil {
+		http.ServeFile(w, r, path.Join(cfg.ImageSavePath, "default.svg"))
+		return
+	}
+
+	fdata := data.(*service.FaviconResult)
+
+	if cfg.LocalCache {
+		http.ServeFile(w, r, path.Join(cfg.ImageSavePath, fdata.Name))
+		return
+	}
+
+	w.Header().Set("Content-Type", fdata.Data.ContentType)
+	w.Write(fdata.Data.Data)
+}
+
+func serveViaImgproxy(w http.ResponseWriter, r *http.Request, client *http.Client, cfg *config.Config, domain string) {
+	imgproxy := service.NewImgproxy(cfg.ImgproxyURL, cfg.ImgproxySourceURL+domain, parseImgproxyOpts(r))
+
+	resp, err := client.Get(imgproxy.Build())
+	if err != nil {
+		http.ServeFile(w, r, path.Join(cfg.ImageSavePath, "default.svg"))
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		http.ServeFile(w, r, path.Join(cfg.ImageSavePath, "default.svg"))
+		return
+	}
+
+	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+	w.Header().Set("Cache-Control", resp.Header.Get("Cache-Control"))
+	w.WriteHeader(http.StatusOK)
+	io.Copy(w, resp.Body)
+}
+
+func parseImgproxyOpts(r *http.Request) *service.ImgproxyOpts {
+	q := r.URL.Query()
+	opts := &service.ImgproxyOpts{
+		Format: q.Get("format"),
+	}
+	if n, err := strconv.Atoi(q.Get("size")); err == nil {
+		opts.Size = n
+	}
+	if n, err := strconv.Atoi(q.Get("quality")); err == nil {
+		opts.Quality = n
+	}
+	if n, err := strconv.Atoi(q.Get("rotate")); err == nil {
+		opts.Rotate = n
+	}
+	return opts
 }

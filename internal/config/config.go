@@ -9,13 +9,15 @@ import (
 )
 
 type Config struct {
-	Address         string
-	ShutdownTimeout time.Duration
-	GinMode         string
-	ImageSavePath   string
-	AppBaseURL      string
-	CacheTTL        time.Duration
-	LocalCache      bool
+	Address           string
+	ShutdownTimeout   time.Duration
+	GinMode           string
+	ImageSavePath     string
+	AppBaseURL        string
+	CacheTTL          time.Duration
+	LocalCache        bool
+	ImgproxyURL       string
+	ImgproxySourceURL string
 }
 
 func LoadConfig() (*Config, error) {
@@ -40,13 +42,15 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return &Config{
-		Address:         env("ADDRESS", ":8080"),
-		ShutdownTimeout: shutdownTimeout,
-		GinMode:         env("GIN_MODE", "debug"),
-		ImageSavePath:   env("IMAGE_SAVE_PATH", "images"),
-		AppBaseURL:      env("APP_BASE_URL", "http://127.0.0.1:8080"),
-		CacheTTL:        cacheTTL,
-		LocalCache:      envBool("LOCAL_CACHE", true),
+		Address:           env("ADDRESS", ":8080"),
+		ShutdownTimeout:   shutdownTimeout,
+		GinMode:           env("GIN_MODE", "debug"),
+		ImageSavePath:     env("IMAGE_SAVE_PATH", "images"),
+		AppBaseURL:        env("APP_BASE_URL", "http://127.0.0.1:8080"),
+		CacheTTL:          cacheTTL,
+		LocalCache:        envBool("LOCAL_CACHE", true),
+		ImgproxyURL:       env("IMGPROXY_URL", ""),
+		ImgproxySourceURL: env("IMGPROXY_SOURCE_URL", ""),
 	}, nil
 }
 
