@@ -5,14 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Favicon API</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:ital,wght@0,100..900;1,100..900&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <section class="hero">
       <h2 class="hero-title">Favicon API</h2>
-      <p class="hero-description">A simple API service to get favicons from any website</p>
+      <p class="hero-description">
+        A simple API service to get favicons from any website
+      </p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="/#">Get Started</a>
         <a class="btn" href="https://github.com/xuerzong/favicon">
@@ -24,13 +29,29 @@
 
     <section class="previwer">
       <div class="previewer-card">
+        <div id="queries" class="previewer-queries"></div>
+
         <label class="input-wrapper" id="input-wrapper">
-          <img class="input-image" id="favicon-preview" src="/favicon.svg" alt="favicon" />
+          <img
+            class="input-image"
+            id="favicon-preview"
+            src="/favicon.svg"
+            alt="favicon"
+          />
           <span class="input-prefix"></span>
-          <input id="url-input" class="input" type="text" placeholder="example.com" />
+          <input
+            id="url-input"
+            class="input"
+            type="text"
+            placeholder="example.com"
+          />
         </label>
-        <div id="loading" class="loading" hidden>加载中</div>
+        <div id="loading" class="loading" hidden>Loading...</div>
       </div>
+    </section>
+
+    <section>
+      <div id="usage-code"></div>
     </section>
 
     <script type="module" src="/src/main.ts"></script>
