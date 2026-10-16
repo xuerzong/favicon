@@ -96,6 +96,11 @@ body {
   white-space: nowrap;
 }
 
+.input-suffix {
+  font-size: 0;
+  cursor: pointer;
+}
+
 .input {
   flex: 1;
   border: none;

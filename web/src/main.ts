@@ -3,20 +3,19 @@ import "./style.css";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/";
+const DEFAULT_DOMAIN = "example.com";
 
 const input = document.getElementById("url-input") as HTMLInputElement;
 const wrapper = document.getElementById("input-wrapper") as HTMLLabelElement;
 const prefix = document.querySelector(".input-prefix") as HTMLSpanElement;
+const inputSuffix = document.querySelector(".input-suffix") as HTMLSpanElement;
 const preview = document.getElementById("favicon-preview") as HTMLImageElement;
 const loading = document.getElementById("loading") as HTMLDivElement;
 
 prefix.textContent = API_BASE_URL;
 
-let debouncedUrl = "example.com";
-
 const handleUrlChange = debounce((nextUrl: string) => {
-  debouncedUrl = nextUrl;
-  preview.src = `${API_BASE_URL}${debouncedUrl || "example.com"}`;
+  preview.src = `${API_BASE_URL}${nextUrl || DEFAULT_DOMAIN}`;
   loading.hidden = true;
 }, 1000);
 
@@ -31,6 +30,11 @@ input.addEventListener("blur", () => {
 input.addEventListener("input", () => {
   loading.hidden = false;
   handleUrlChange(input.value);
+});
+
+inputSuffix.addEventListener("click", (e) => {
+  e.preventDefault();
+  window.open(`${API_BASE_URL}${input.value || "example.com"}`, "_blank");
 });
 
 type FormItem = {
@@ -66,7 +70,7 @@ const formItems: FormItem[] = [
     label: "Rotate",
     name: "rotate",
     type: "select",
-    defaultValue: "180",
+    defaultValue: "0",
     options: [0, 90, 180, 270].map(String).map((op) => ({
       text: op,
       value: op,
@@ -160,7 +164,7 @@ function updateQueryString(newQueries: Partial<Query>) {
     .filter(Boolean)
     .join("&");
 
-  const pureDomain = debouncedUrl.split("?")[0];
+  const pureDomain = input.value?.split("?")[0] || DEFAULT_DOMAIN;
   updateInputValue(queryString ? `${pureDomain}?${queryString}` : pureDomain);
 }
 
