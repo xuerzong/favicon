@@ -1,5 +1,3 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from "vite";
 
-export default defineConfig({
-  base: process.env.GITHUB_ACTIONS ? '/favicon/' : '/',
-})
+export default defineConfig({});
